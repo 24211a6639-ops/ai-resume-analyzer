@@ -1,25 +1,17 @@
-# 🚀 AI Resume Analyzer
+# AI Resume Analyzer
 
-A smart AI-based web app that analyzes resumes and matches them with job descriptions.
+This project analyzes resumes and matches them with job descriptions.
 
-## 🔥 Features
-- 📄 Upload Resume (PDF)
-- 🧠 AI Semantic Matching (TF-IDF + Cosine Similarity)
-- 📊 Skill Match Score
-- ✅ Matched Skills
-- ❌ Missing Skills
-- 💡 Recommended Skills to Learn
+Features:
+- Upload resume (PDF)
+- Extract skills
+- Match score
+- Missing skills
 
-## 🛠️ Tech Stack
+Tech:
 - Python
 - Streamlit
 - Scikit-learn
-- PyPDF2
 
-## 🌐 Live Demo
+Live App:
 https://ai-resume-analyzer-gbgilojbr4by9i6t6sfvmb.streamlit.app
-
-## 📌 How to Run
-```bash
-pip install -r requirements.txt
-streamlit run app.py
