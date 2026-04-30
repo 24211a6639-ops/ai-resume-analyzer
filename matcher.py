@@ -1,112 +1,135 @@
-import spacy
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+import streamlit as st
+import plotly.express as px
+from myparser import extract_text
+from matcher import calculate_match, get_suggestions
 
-# ---------------------------
-# Load spaCy model safely
-# ---------------------------
-try:
-    nlp = spacy.load("en_core_web_sm")
-except:
-    from spacy.cli import download
-    download("en_core_web_sm")
-    nlp = spacy.load("en_core_web_sm")
+st.set_page_config(page_title="AI Resume Analyzer", layout="wide")
 
+# ---------------- UI STYLE ----------------
+st.markdown("""
+<style>
+.main {
+    background: linear-gradient(135deg, #0f172a, #020617);
+    color: white;
+}
+.glass {
+    background: rgba(255,255,255,0.05);
+    padding: 20px;
+    border-radius: 15px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    margin-bottom: 20px;
+}
+h1, h2, h3 {
+    color: #38bdf8;
+}
+.stButton>button {
+    background: linear-gradient(90deg, #06b6d4, #3b82f6);
+    color: white;
+    border-radius: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# ---------------------------
-# Skills database
-# ---------------------------
-skills_db = [
-    "python", "java", "c++", "sql", "mysql", "mongodb",
-    "machine learning", "deep learning", "nlp", "data science",
-    "tensorflow", "pytorch", "pandas", "numpy",
-    "html", "css", "javascript", "react",
-    "flask", "django", "streamlit",
-    "aws", "docker", "kubernetes",
-    "git", "github", "api"
-]
+# ---------------- TITLE ----------------
+st.title("📄 AI Resume Analyzer")
 
+# ---------------- INPUT ----------------
+uploaded_file = st.file_uploader("Upload Resume", type=["pdf", "docx"])
+job_desc = st.text_area("Enter Job Description")
 
-# ---------------------------
-# Extract skills using NLP
-# ---------------------------
-def extract_skills(text):
-    text = text.lower()
-    doc = nlp(text)
+# ---------------- PROCESS ----------------
+if uploaded_file and job_desc:
 
-    found = set()
+    # Save file temporarily
+    with open(uploaded_file.name, "wb") as f:
+        f.write(uploaded_file.getbuffer())
 
-    # Direct matching
-    for skill in skills_db:
-        if skill in text:
-            found.add(skill)
+    resume_text = extract_text(uploaded_file.name)
 
-    # NLP token matching
-    for token in doc:
-        for skill in skills_db:
-            if token.text in skill or skill in token.text:
-                found.add(skill)
+    if not resume_text.strip():
+        st.error("❌ Resume text extraction failed")
+        st.stop()
 
-    return list(found)
+    # Debug
+    st.write("Extracted length:", len(resume_text))
 
+    # Calculate match
+    score, matched, missing, resume_score = calculate_match(resume_text, job_desc)
+    suggestions = get_suggestions(missing)
 
-# ---------------------------
-# Calculate match score
-# ---------------------------
-def calculate_match(resume_text, job_text):
-    resume_skills = extract_skills(resume_text)
-    job_skills = extract_skills(job_text)
+    # ---------------- RESULT UI ----------------
+    st.markdown("## 📊 Match Result")
 
-    matched = list(set(resume_skills) & set(job_skills))
-    missing = list(set(job_skills) - set(resume_skills))
+    st.progress(score / 100)
 
-    # Avoid division error
-    if len(job_skills) == 0:
-        return 0, matched, missing, 0
+    col1, col2, col3 = st.columns(3)
 
-    # Skill score (70%)
-    skill_score = (len(matched) / len(job_skills)) * 70
+    with col1:
+        st.metric("🎯 Match Score", f"{score}%")
 
-    # Resume strength (30%)
-    word_count = len(resume_text.split())
-    resume_score = min((word_count / 500) * 30, 30)
+    with col2:
+        st.metric("📄 Resume Strength", f"{resume_score}%")
 
-    total_score = min(skill_score + resume_score, 100)
+    with col3:
+        st.metric("🧠 Skills Found", len(matched))
 
-    return round(total_score, 2), matched, missing, round(resume_score, 2)
+    # ---------------- MATCHED ----------------
+    st.markdown("### ✅ Matched Skills")
+    for skill in matched:
+        st.success(f"✔ {skill}")
 
+    # ---------------- MISSING ----------------
+    st.markdown("### ❌ Missing Skills")
+    for skill in missing:
+        st.error(f"✖ {skill}")
 
-# ---------------------------
-# Suggestions
-# ---------------------------
-def get_suggestions(missing_skills):
-    learning_map = {
-        "python": "Practice Python projects (automation, ML)",
-        "sql": "Learn joins, queries, and DB design",
-        "machine learning": "Build ML models (classification, regression)",
-        "deep learning": "Learn CNN, NLP basics",
-        "aws": "Learn EC2, S3 basics",
-        "docker": "Understand containerization",
-        "react": "Build frontend apps using React"
+    # ---------------- SUGGESTIONS ----------------
+    st.markdown("### 💡 Suggestions")
+    for s in suggestions:
+        st.info(s)
+
+    # ---------------- CHART ----------------
+    data = {
+        "Category": ["Matched", "Missing"],
+        "Count": [len(matched), len(missing)]
     }
 
-    suggestions = []
+    fig = px.pie(
+        names=data["Category"],
+        values=data["Count"],
+        color_discrete_sequence=["#22c55e", "#ef4444"]
+    )
 
-    for skill in missing_skills:
-        if skill in learning_map:
-            suggestions.append(f"👉 {learning_map[skill]}")
-        else:
-            suggestions.append(f"👉 Learn {skill}")
+    st.plotly_chart(fig)
 
-    return suggestions
+    # ---------------- FEEDBACK ----------------
+    if score >= 80:
+        st.success("🔥 Excellent Resume – Job Ready")
+    elif score >= 60:
+        st.warning("👍 Good Resume – Improve More")
+    else:
+        st.error("⚠️ Needs Improvement")
 
+    # ---------------- DOWNLOAD ----------------
+    report = f"""
+Resume Match Report
 
-# ---------------------------
-# Optional: Semantic similarity (advanced)
-# ---------------------------
-def semantic_similarity(text1, text2):
-    vectorizer = CountVectorizer().fit_transform([text1, text2])
-    vectors = vectorizer.toarray()
+Score: {score}%
 
-    sim = cosine_similarity([vectors[0]], [vectors[1]])[0][0]
-    return round(sim * 100, 2)
+Resume Strength: {resume_score}%
+
+Matched Skills:
+{matched}
+
+Missing Skills:
+{missing}
+
+Suggestions:
+{chr(10).join(suggestions)}
+"""
+
+    st.download_button("📥 Download Report", report, file_name="resume_report.txt")
+
+else:
+    st.info("📌 Upload resume and enter job description")
