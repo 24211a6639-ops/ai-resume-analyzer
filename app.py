@@ -1,13 +1,11 @@
 import streamlit as st
-<<<<<<< HEAD
 import plotly.express as px
-from myparser import extract_text   # or parser.py if you didn't rename
-from matcher import calculate_match, get_suggestions
+from myparser import extract_text
+from matcher import calculate_match, get_suggestions, semantic_similarity
 
-# ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="AI Resume Analyzer", layout="wide")
 
-# ---------------- THEME ----------------
+# ---------- STYLE ----------
 st.markdown("""
 <style>
 .main {
@@ -19,209 +17,117 @@ st.markdown("""
     padding: 20px;
     border-radius: 15px;
     backdrop-filter: blur(12px);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     margin-bottom: 20px;
-}
-h1, h2, h3 {
-    color: #38bdf8;
-}
-.stButton>button {
-    background: linear-gradient(90deg, #06b6d4, #3b82f6);
-    color: white;
-    border-radius: 10px;
-    border: none;
-    padding: 10px 20px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- SIDEBAR ----------------
-menu = st.sidebar.radio(
-    "📌 Navigation",
-    ["📤 Upload", "📊 Results", "📈 Insights"]
-)
+# ---------- SIDEBAR ----------
+menu = st.sidebar.radio("📌 Navigation", ["Upload", "Results", "Insights"])
 
-# ---------------- HEADER ----------------
-st.markdown("""
-<div class="glass">
-<h1>🚀 AI Resume Analyzer</h1>
-<p>Analyze your resume like an ATS system and improve your chances.</p>
-</div>
-""", unsafe_allow_html=True)
+# ---------- STATE ----------
+if "data" not in st.session_state:
+    st.session_state.data = None
 
-# ---------------- INPUT SECTION ----------------
-col1, col2 = st.columns([1, 2])
+# ---------- UPLOAD ----------
+if menu == "Upload":
 
-with col1:
-    uploaded_file = st.file_uploader("📄 Upload Resume", type=["pdf", "docx"])
+    st.title("📄 AI Resume Analyzer")
 
-with col2:
-    job_desc = st.text_area("💼 Enter Job Description")
+    uploaded_file = st.file_uploader("Upload Resume", type=["pdf", "docx"])
+    job_desc = st.text_area("Enter Job Description")
 
-# ---------------- PROCESSING ----------------
-if uploaded_file and job_desc:
+    if st.button("Analyze"):
 
-    # Save file
-    with open(uploaded_file.name, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+        if not uploaded_file or not job_desc:
+            st.warning("Please upload file and enter job description")
+            st.stop()
 
-    with st.spinner("Analyzing your resume..."):
+        with open(uploaded_file.name, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+
         resume_text = extract_text(uploaded_file.name)
 
-    # Debug
-    st.write("🔍 Extracted length:", len(resume_text))
+        if not resume_text.strip():
+            st.error("Text extraction failed")
+            st.stop()
 
-    if not resume_text.strip():
-        st.error("❌ Resume extraction failed")
-        st.stop()
+        score, matched, missing, resume_score = calculate_match(resume_text, job_desc)
+        suggestions = get_suggestions(missing)
+        sim = semantic_similarity(resume_text, job_desc)
 
-    # Calculate
-    score, matched, missing, resume_score = calculate_match(resume_text, job_desc)
-    suggestions = get_suggestions(missing)
-
-    # ---------------- RESULTS ----------------
-    if menu == "📊 Results":
-
-        st.markdown("## 📊 Match Result")
-
-        # Progress bar
-        st.progress(score / 100)
-
-        # Metrics
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            st.metric("🎯 Match Score", f"{score}%")
-
-        with col2:
-            st.metric("📄 Resume Strength", f"{resume_score}%")
-
-        with col3:
-            st.metric("🧠 Skills Found", len(matched))
-
-        # Status
-        if score >= 80:
-            st.markdown("🔥 **Excellent Resume – Job Ready**")
-        elif score >= 60:
-            st.markdown("👍 **Good Resume – Improve More**")
-        else:
-            st.markdown("⚠️ **Needs Improvement**")
-
-        # Matched Skills
-        st.markdown("### ✅ Matched Skills")
-        for skill in matched:
-            st.markdown(f"""
-            <div class="glass">🟢 <b>{skill}</b></div>
-            """, unsafe_allow_html=True)
-
-        # Missing Skills
-        st.markdown("### ❌ Missing Skills")
-        for skill in missing:
-            st.markdown(f"""
-            <div class="glass">🔴 <b>{skill}</b></div>
-            """, unsafe_allow_html=True)
-
-        # Suggestions
-        st.markdown("### 💡 Suggestions")
-        for s in suggestions:
-            st.markdown(f"""
-            <div class="glass">💡 {s}</div>
-            """, unsafe_allow_html=True)
-
-        # ---------------- CHART ----------------
-        data = {
-            "Category": ["Matched", "Missing"],
-            "Count": [len(matched), len(missing)]
+        st.session_state.data = {
+            "score": score,
+            "matched": matched,
+            "missing": missing,
+            "resume_score": resume_score,
+            "suggestions": suggestions,
+            "sim": sim
         }
 
-        fig = px.pie(
-            names=data["Category"],
-            values=data["Count"],
-            color_discrete_sequence=["#22c55e", "#ef4444"]
-        )
+        st.success("Analysis complete → Go to Results")
 
-        st.plotly_chart(fig, use_container_width=True)
+# ---------- RESULTS ----------
+elif menu == "Results":
 
-        # ---------------- DOWNLOAD REPORT ----------------
-        report = f"""
-Resume Match Report
+    data = st.session_state.data
 
-Score: {score}%
-Resume Strength: {resume_score}%
+    if not data:
+        st.warning("Run analysis first")
+        st.stop()
 
-Matched Skills:
-{matched}
+    st.title("📊 Results")
 
-Missing Skills:
-{missing}
+    st.progress(data["score"] / 100)
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Match Score", f"{data['score']}%")
+    col2.metric("Resume Strength", f"{data['resume_score']}%")
+    col3.metric("Semantic Match", f"{data['sim']}%")
+
+    st.markdown("### ✅ Matched Skills")
+    for s in data["matched"]:
+        st.success(s)
+
+    st.markdown("### ❌ Missing Skills")
+    for s in data["missing"]:
+        st.error(s)
+
+# ---------- INSIGHTS ----------
+elif menu == "Insights":
+
+    data = st.session_state.data
+
+    if not data:
+        st.warning("Run analysis first")
+        st.stop()
+
+    st.title("📈 Insights")
+
+    # Pie chart
+    fig = px.pie(
+        names=["Matched", "Missing"],
+        values=[len(data["matched"]), len(data["missing"])],
+        color_discrete_sequence=["green", "red"]
+    )
+
+    st.plotly_chart(fig)
+
+    st.markdown("### 💡 Suggestions")
+    for s in data["suggestions"]:
+        st.info(s)
+
+    # Download report
+    report = f"""
+Score: {data['score']}%
+Resume Strength: {data['resume_score']}
+
+Matched: {data['matched']}
+Missing: {data['missing']}
 
 Suggestions:
-{chr(10).join(suggestions)}
+{chr(10).join(data['suggestions'])}
 """
 
-        st.download_button(
-            "📥 Download Report",
-            report,
-            file_name="resume_report.txt"
-        )
-
-    # ---------------- INSIGHTS ----------------
-    if menu == "📈 Insights":
-
-        st.markdown("## 📈 Insights")
-
-        st.write("### 🧠 Skills Summary")
-        st.write("Matched:", ", ".join(matched))
-        st.write("Missing:", ", ".join(missing))
-
-        st.write("### 📊 Performance")
-        st.progress(score / 100)
-
-else:
-    st.info("📌 Please upload resume and enter job description")
-=======
-from extractor import extract_text
-from parser import extract_skills, calculate_match, advanced_match
-
-st.title("AI Resume Analyzer 🚀")
-st.markdown("### 🔍 Smart Resume Analyzer with AI Matching")
-
-uploaded_file = st.file_uploader("Upload your resume (PDF)", type=["pdf"])
-job_desc = st.text_area("Paste Job Description here")
-
-if uploaded_file:
-    st.success("File uploaded successfully!")
-
-    text = extract_text(uploaded_file) or ""
-
-    st.subheader("Extracted Text:")
-    st.write(text[:500])
-
-    skills = extract_skills(text)
-
-    st.subheader("Extracted Skills:")
-    st.write(skills)
-
-    if job_desc:
-        score, matched, missing = calculate_match(text, job_desc)
-        ai_score = advanced_match(text, job_desc)
-
-        st.subheader("Keyword Match Score:")
-        st.success(f"{score}%")
-
-        st.subheader("AI Semantic Match Score:")
-        st.info(f"{ai_score}%")
-
-        st.subheader("Matched Skills:")
-        st.write(list(matched))
-
-        st.subheader("Missing Skills:")
-        st.write(missing)
-
-        if missing:
-            st.subheader("Recommended Skills to Learn:")
-            for skill in missing:
-                st.write(f"👉 Learn {skill}")
-
-        st.download_button("Download Skills Report", str(skills))
->>>>>>> 0da3034b1e708a241d4cc0d131ebdb772f0fc205
+    st.download_button("Download Report", report)
