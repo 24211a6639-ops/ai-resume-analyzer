@@ -1,17 +1,21 @@
-# AI Resume Analyzer
+# 🚀 AI Resume Analyzer
 
-This project analyzes resumes and matches them with job descriptions.
+An AI-powered web app that analyzes resumes and matches them with job descriptions.
 
-Features:
-- Upload resume (PDF)
-- Extract skills
-- Match score
-- Missing skills
+## 🔥 Features
+- Resume parsing (PDF/DOCX)
+- Skill extraction using NLP
+- Match score calculation
+- Missing skills detection
+- Smart suggestions
+- ATS score breakdown
 
-Tech:
+## 🛠 Tech Stack
 - Python
 - Streamlit
+- spaCy
 - Scikit-learn
+- Plotly
 
-Live App:
-https://ai-resume-analyzer-gbgilojbr4by9i6t6sfvmb.streamlit.app
+## 🌍 Live Demo
+👉 https://your-app.streamlit.app
