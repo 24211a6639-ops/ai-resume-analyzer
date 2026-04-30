@@ -3,6 +3,8 @@ import plotly.express as px
 from parser import extract_text
 from matcher import calculate_match, get_suggestions
 
+# ✅ AFTER imports
+st.write("🚀 NEW UI LOADED")
 st.set_page_config(page_title="AI Resume Analyzer", layout="wide")
 
 # ---------- MODERN UI ----------
