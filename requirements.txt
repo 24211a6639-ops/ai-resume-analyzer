@@ -1,3 +1,6 @@
 streamlit
-scikit-learn
 PyPDF2
+python-docx
+spacy
+scikit-learn
+plotly
