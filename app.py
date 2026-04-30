@@ -1,35 +1,48 @@
-import PyPDF2
-import docx
+import streamlit as st
 
-def extract_text(file_path):
-    """
-    Extract text from PDF or DOCX file and return lowercase text
-    """
-    text = ""
+import plotly.express as px
+from parser import extract_text
+from matcher import calculate_match, get_suggestions
+import tempfile
 
-    try:
-        
-        if file_path.endswith(".pdf"):
-            with open(file_path, "rb") as f:
-                reader = PyPDF2.PdfReader(f)
+st.set_page_config(page_title="AI Resume Analyzer", layout="wide")
 
-                for page in reader.pages:
-                    content = page.extract_text()
-                    if content:
-                        text += content
+st.title("TEST APP WORKING")
+st.write("If you see this, deployment is fine")
 
-        
-        elif file_path.endswith(".docx"):
-            doc = docx.Document(file_path)
+file = st.file_uploader("Upload Resume", type=["pdf","docx"])
+job = st.text_area("Enter Job Description")
 
-            for para in doc.paragraphs:
-                text += para.text + "\n"
+role = st.selectbox("Role", ["ML Engineer","Web Developer","Data Analyst"])
 
-        else:
-            return ""
+if file and job:
 
-    except Exception as e:
-        print("Error reading file:", e)
-        return ""
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp.write(file.getbuffer())
+        path = tmp.name
 
-    return text.lower()
+    text = extract_text(path)
+
+    score, matched, missing, strength, sem = calculate_match(text, job, role)
+
+    st.metric("Score", f"{score}%")
+    st.metric("Resume Strength", f"{strength}%")
+    st.metric("Semantic", f"{sem}%")
+
+    st.progress(score/100)
+
+    fig = px.bar(x=["Matched","Missing"], y=[len(matched),len(missing)])
+    st.plotly_chart(fig)
+
+    st.subheader("Matched Skills")
+    st.write(matched)
+
+    st.subheader("Missing Skills")
+    st.write(missing)
+
+    st.subheader("Suggestions")
+    for s in get_suggestions(missing):
+        st.info(s)
+
+else:
+    st.info("Upload resume + job description")
