@@ -1,3 +1,12 @@
+<<<<<<< HEAD
 python-docx 
 scikit-learn
 PyPDF2
+=======
+streamlit
+PyPDF2
+python-docx
+spacy
+scikit-learn
+plotly
+>>>>>>> 0da3034b1e708a241d4cc0d131ebdb772f0fc205
