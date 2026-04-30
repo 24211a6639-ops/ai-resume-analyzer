@@ -2,6 +2,7 @@ import streamlit as st
 import plotly.express as px
 from parser import extract_text
 from matcher import calculate_match, get_suggestions
+import tempfile
 
 st.set_page_config(page_title="AI Resume Analyzer", layout="wide")
 
@@ -34,10 +35,12 @@ role = st.selectbox("Select Role", ["ML Engineer", "Web Developer", "Data Analys
 
 if uploaded_file and job_desc:
 
-    with open(uploaded_file.name, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    # ✅ SAFE FILE HANDLING (IMPORTANT FIX)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=uploaded_file.name) as tmp:
+        tmp.write(uploaded_file.getbuffer())
+        temp_path = tmp.name
 
-    resume_text = extract_text(uploaded_file.name)
+    resume_text = extract_text(temp_path)
 
     score, matched, missing, strength, sem_score = calculate_match(
         resume_text, job_desc, role
@@ -86,4 +89,4 @@ if uploaded_file and job_desc:
         st.error("⚠️ Needs improvement")
 
 else:
-    st.info("Upload resume and enter job description")
+    st.info("📌 Upload resume and enter job description")

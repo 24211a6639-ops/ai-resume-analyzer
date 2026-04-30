@@ -1,4 +1,4 @@
-✔ Give you full upgraded code (all features combined)import PyPDF2
+import PyPDF2
 import docx
 
 def extract_text(file_path):
@@ -17,7 +17,7 @@ def extract_text(file_path):
                 text += para.text + "\n"
 
     except Exception as e:
-        print("Error:", e)
+        print("Error reading file:", e)
         return ""
 
     return text.lower()
