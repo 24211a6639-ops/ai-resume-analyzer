@@ -2,17 +2,12 @@ import PyPDF2
 import docx
 
 def extract_text(file_path):
-    """
-    Extract text from PDF or DOCX file
-    """
     text = ""
 
     try:
-        
         if file_path.endswith(".pdf"):
             with open(file_path, "rb") as f:
                 reader = PyPDF2.PdfReader(f)
-
                 for page in reader.pages:
                     content = page.extract_text()
                     if content:
@@ -20,15 +15,11 @@ def extract_text(file_path):
 
         elif file_path.endswith(".docx"):
             doc = docx.Document(file_path)
-
             for para in doc.paragraphs:
                 text += para.text + "\n"
 
-        else:
-            return ""
-
     except Exception as e:
-        print("Error reading file:", e)
+        print("Error:", e)
         return ""
 
     return text.lower()

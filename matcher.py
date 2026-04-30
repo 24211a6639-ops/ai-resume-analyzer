@@ -1,80 +1,43 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Skill database
 skills_db = [
-    "python", "java", "c++", "sql", "mysql", "mongodb",
-    "machine learning", "deep learning", "nlp", "data science",
-    "tensorflow", "pytorch", "pandas", "numpy",
-    "html", "css", "javascript", "react",
-    "flask", "django", "streamlit",
-    "aws", "docker", "git", "github"
+    "python","java","sql","machine learning","deep learning",
+    "html","css","javascript","react","pandas","numpy"
 ]
 
-# Role-based skills
 role_skills = {
-    "ML Engineer": ["python", "machine learning", "tensorflow", "pytorch"],
+    "ML Engineer": ["python", "machine learning"],
     "Web Developer": ["html", "css", "javascript", "react"],
     "Data Analyst": ["python", "sql", "pandas"]
 }
 
-# Extract skills
 def extract_skills(text):
-    found = []
-    for skill in skills_db:
-        if skill in text:
-            found.append(skill)
-    return list(set(found))
+    return [s for s in skills_db if s in text]
 
-# Semantic similarity (REAL NLP)
-def semantic_score(resume_text, job_text):
-    vectorizer = TfidfVectorizer()
-    vectors = vectorizer.fit_transform([resume_text, job_text])
-    sim = cosine_similarity(vectors[0], vectors[1])[0][0]
+def semantic_score(resume, job):
+    vec = TfidfVectorizer().fit_transform([resume, job])
+    sim = cosine_similarity(vec[0], vec[1])[0][0]
     return round(sim * 100, 2)
 
-# Main matching
-def calculate_match(resume_text, job_text, role):
-    resume_skills = extract_skills(resume_text)
-    job_skills = extract_skills(job_text)
+def calculate_match(resume, job, role):
+    r_skills = extract_skills(resume)
+    j_skills = extract_skills(job)
 
-    # Role-based skills
-    role_required = role_skills.get(role, [])
+    role_req = role_skills.get(role, [])
 
-    matched = list(set(resume_skills) & set(job_skills + role_required))
-    missing = list(set(job_skills + role_required) - set(resume_skills))
+    matched = list(set(r_skills) & set(j_skills + role_req))
+    missing = list(set(j_skills + role_req) - set(r_skills))
 
-    if len(job_skills) == 0:
-        return 0, matched, missing, 0, 0
+    skill_score = (len(matched) / max(len(j_skills + role_req),1)) * 70
+    sem = semantic_score(resume, job) * 0.3
 
-    # Skill score (70%)
-    skill_score = (len(matched) / len(job_skills + role_required)) * 70
+    word_count = len(resume.split())
+    strength = min((word_count / 500) * 100, 100)
 
-    # Semantic score (30%)
-    sem_score = semantic_score(resume_text, job_text) * 0.3
+    final = round(skill_score + sem, 2)
 
-    # Resume strength
-    word_count = len(resume_text.split())
-    resume_strength = min((word_count / 500) * 100, 100)
+    return final, matched, missing, round(strength,2), round(sem,2)
 
-    final_score = round(skill_score + sem_score, 2)
-
-    return final_score, matched, missing, round(resume_strength, 2), round(sem_score, 2)
-
-# Suggestions
-def get_suggestions(missing_skills):
-    learning_map = {
-        "sql": "Build SQL projects (joins, queries, DB design)",
-        "python": "Add Python projects (automation, ML)",
-        "react": "Build frontend apps using React",
-        "machine learning": "Create ML models (classification/regression)"
-    }
-
-    suggestions = []
-    for skill in missing_skills:
-        if skill in learning_map:
-            suggestions.append(f"👉 {learning_map[skill]}")
-        else:
-            suggestions.append(f"👉 Learn {skill}")
-
-    return suggestions
+def get_suggestions(missing):
+    return [f"Improve {s} with projects" for s in missing]
