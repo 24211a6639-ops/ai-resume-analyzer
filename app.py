@@ -9,17 +9,19 @@ st.title("🚀 APP IS LIVE")
 =======
 # Load custom CSS
 def load_css():
-    st.markdown(""", unsafe_allow_html=True)
+    st.markdown("""
     <style>
     body {
         font-family: 'Roboto', sans-serif;
         background: linear-gradient(to right, #1e1e2f, #2a2a3d);
         color: #EAEAEA;
     }
+
     .sidebar {
         background-color: #2c2c3d;
         padding: 20px;
     }
+
     .button {
         background-color: #4caf50;
         border: none;
@@ -30,9 +32,10 @@ def load_css():
         display: inline-block;
         margin: 4px 2px;
         cursor: pointer;
+        border-radius: 8px;
     }
     </style>
-    "", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 load_css()
 
