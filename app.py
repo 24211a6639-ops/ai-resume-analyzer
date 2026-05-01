@@ -9,7 +9,7 @@ st.title("🚀 APP IS LIVE")
 =======
 # Load custom CSS
 def load_css():
-    st.markdown("""
+    st.markdown(""", unsafe_allow_html=True)
     <style>
     body {
         font-family: 'Roboto', sans-serif;
